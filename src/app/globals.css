@@ -3,25 +3,82 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0b;
+  --foreground: #e4e4e7;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --muted: #18181b;
+  --muted-foreground: #71717a;
+  --border: #27272a;
+  --card: #111113;
+  --card-foreground: #e4e4e7;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.light {
+  --background: #fafafa;
+  --foreground: #18181b;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --border: #e4e4e7;
+  --card: #ffffff;
+  --card-foreground: #18181b;
 }
 
 body {
+  background-color: var(--background);
   color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .path-pill {
+    @apply font-mono text-sm px-2 py-0.5 rounded;
+    background-color: var(--muted);
+    border: 1px solid var(--border);
   }
+}
+
+/* Staggered fade-in animations for guide sections */
+.guide-section {
+  opacity: 0;
+  animation: fade-in-up 0.5s ease-out forwards;
+}
+
+.guide-section:nth-child(1) { animation-delay: 0ms; }
+.guide-section:nth-child(2) { animation-delay: 100ms; }
+.guide-section:nth-child(3) { animation-delay: 200ms; }
+.guide-section:nth-child(4) { animation-delay: 300ms; }
+.guide-section:nth-child(5) { animation-delay: 400ms; }
+.guide-section:nth-child(6) { animation-delay: 500ms; }
+.guide-section:nth-child(7) { animation-delay: 600ms; }
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
 }
