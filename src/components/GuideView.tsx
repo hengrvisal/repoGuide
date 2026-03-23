@@ -1,12 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { AnalysisResult } from "@/lib/types";
 import { ArchitectureOverview } from "./ArchitectureOverview";
 import { FolderMap } from "./FolderMap";
 import { ReadingPath } from "./ReadingPath";
 import { PatternsList } from "./PatternsList";
 import { DependencyOverview } from "./DependencyOverview";
+
+const ArchitectureMap = lazy(() =>
+  import("./ArchitectureMap").then((m) => ({ default: m.ArchitectureMap }))
+);
+
+const hasValidGraph = (guide: AnalysisResult) =>
+  guide.architectureGraph &&
+  guide.architectureGraph.nodes &&
+  guide.architectureGraph.nodes.length >= 3;
 
 export function GuideView({ guide }: { guide: AnalysisResult }) {
   const [copied, setCopied] = useState(false);
@@ -22,7 +31,7 @@ export function GuideView({ guide }: { guide: AnalysisResult }) {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       {/* Sticky header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
@@ -55,107 +64,136 @@ export function GuideView({ guide }: { guide: AnalysisResult }) {
       </header>
 
       {/* Guide content */}
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        {/* Quick Summary Card */}
-        <section className="guide-section mb-10">
-          <div className="rounded-xl border border-border bg-card p-6">
-            <div className="flex flex-wrap items-center gap-3 mb-3">
-              <h1 className="font-mono text-xl font-bold">
-                {guide.owner}/{guide.repo}
-              </h1>
-              <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279-7.416-3.967-7.417 3.967 1.481-8.279-6.064-5.828 8.332-1.151z" />
-                </svg>
-                {guide.stars.toLocaleString()}
+      <main>
+        {/* Narrow column sections */}
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12">
+          {/* Quick Summary Card */}
+          <section className="guide-section mb-10">
+            <div className="rounded-xl border border-border bg-card p-6">
+              <div className="flex flex-wrap items-center gap-3 mb-3">
+                <h1 className="font-mono text-xl font-bold">
+                  {guide.owner}/{guide.repo}
+                </h1>
+                <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279-7.416-3.967-7.417 3.967 1.481-8.279-6.064-5.828 8.332-1.151z" />
+                  </svg>
+                  {guide.stars.toLocaleString()}
+                </div>
+              </div>
+              <p className="text-foreground/90 mb-4">{guide.summary.description}</p>
+              <div className="flex flex-wrap gap-2">
+                {guide.summary.primaryLanguage && (
+                  <span className="path-pill">{guide.summary.primaryLanguage}</span>
+                )}
+                {guide.summary.framework && (
+                  <span className="path-pill">{guide.summary.framework}</span>
+                )}
+                {guide.summary.buildTool && (
+                  <span className="path-pill">{guide.summary.buildTool}</span>
+                )}
+                <span className="path-pill text-muted-foreground">
+                  Updated {new Date(guide.lastUpdated).toLocaleDateString()}
+                </span>
               </div>
             </div>
-            <p className="text-foreground/90 mb-4">{guide.summary.description}</p>
-            <div className="flex flex-wrap gap-2">
-              {guide.summary.primaryLanguage && (
-                <span className="path-pill">{guide.summary.primaryLanguage}</span>
-              )}
-              {guide.summary.framework && (
-                <span className="path-pill">{guide.summary.framework}</span>
-              )}
-              {guide.summary.buildTool && (
-                <span className="path-pill">{guide.summary.buildTool}</span>
-              )}
-              <span className="path-pill text-muted-foreground">
-                Updated {new Date(guide.lastUpdated).toLocaleDateString()}
-              </span>
+          </section>
+        </div>
+
+        {/* Architecture Map — full-width breakout */}
+        {hasValidGraph(guide) && (
+          <section className="guide-section map-breakout mb-0">
+            <div className="px-4 sm:px-8 mb-4">
+              <h2 className="font-mono text-lg font-bold mb-1 text-accent">
+                Architecture Map
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                Click any component to explore
+              </p>
             </div>
-          </div>
-        </section>
+            <Suspense
+              fallback={
+                <div className="h-[350px] md:h-[450px] lg:h-[600px] flex items-center justify-center text-muted-foreground text-sm">
+                  Loading graph...
+                </div>
+              }
+            >
+              <ArchitectureMap graph={guide.architectureGraph!} repoUrl={guide.repoUrl} />
+            </Suspense>
+          </section>
+        )}
 
-        {/* Architecture Overview */}
-        <section className="guide-section mb-10">
-          <h2 className="font-mono text-lg font-bold mb-4 text-accent">
-            Architecture Overview
-          </h2>
-          <ArchitectureOverview content={guide.architecture} />
-        </section>
+        {/* Remaining narrow column sections */}
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+          {/* Architecture Overview */}
+          <section className="guide-section mb-10">
+            <h2 className="font-mono text-lg font-bold mb-4 text-accent">
+              Architecture Overview
+            </h2>
+            <ArchitectureOverview content={guide.architecture} />
+          </section>
 
-        {/* Annotated Folder Map */}
-        <section className="guide-section mb-10">
-          <h2 className="font-mono text-lg font-bold mb-4 text-accent">
-            Annotated Folder Map
-          </h2>
-          <FolderMap
-            items={guide.folderMap}
-            repoUrl={guide.repoUrl}
-          />
-        </section>
+          {/* Annotated Folder Map */}
+          <section className="guide-section mb-10">
+            <h2 className="font-mono text-lg font-bold mb-4 text-accent">
+              Annotated Folder Map
+            </h2>
+            <FolderMap
+              items={guide.folderMap}
+              repoUrl={guide.repoUrl}
+            />
+          </section>
 
-        {/* Suggested Reading Order */}
-        <section className="guide-section mb-10">
-          <h2 className="font-mono text-lg font-bold mb-4 text-accent">
-            Suggested Reading Order
-          </h2>
-          <ReadingPath
-            items={guide.readingPath}
-            repoUrl={guide.repoUrl}
-          />
-        </section>
+          {/* Suggested Reading Order */}
+          <section className="guide-section mb-10">
+            <h2 className="font-mono text-lg font-bold mb-4 text-accent">
+              Suggested Reading Order
+            </h2>
+            <ReadingPath
+              items={guide.readingPath}
+              repoUrl={guide.repoUrl}
+            />
+          </section>
 
-        {/* Patterns & Conventions */}
-        <section className="guide-section mb-10">
-          <h2 className="font-mono text-lg font-bold mb-4 text-accent">
-            Patterns &amp; Conventions
-          </h2>
-          <PatternsList patterns={guide.patterns} />
-        </section>
+          {/* Patterns & Conventions */}
+          <section className="guide-section mb-10">
+            <h2 className="font-mono text-lg font-bold mb-4 text-accent">
+              Patterns &amp; Conventions
+            </h2>
+            <PatternsList patterns={guide.patterns} />
+          </section>
 
-        {/* Key Dependencies */}
-        <section className="guide-section mb-10">
-          <h2 className="font-mono text-lg font-bold mb-4 text-accent">
-            Key Dependencies
-          </h2>
-          <DependencyOverview dependencies={guide.dependencies} />
-        </section>
+          {/* Key Dependencies */}
+          <section className="guide-section mb-10">
+            <h2 className="font-mono text-lg font-bold mb-4 text-accent">
+              Key Dependencies
+            </h2>
+            <DependencyOverview dependencies={guide.dependencies} />
+          </section>
 
-        {/* Footer actions */}
-        <section className="guide-section border-t border-border pt-8 mt-12">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex gap-3">
-              <button
-                onClick={handleShare}
-                className="px-4 py-2 rounded-lg border border-border bg-card text-sm hover:border-accent/50 transition-colors"
-              >
-                {copied ? "Copied!" : "Share this guide"}
-              </button>
-              <button
-                onClick={handleRegenerate}
-                className="px-4 py-2 rounded-lg border border-border bg-card text-sm hover:border-accent/50 transition-colors"
-              >
-                Regenerate
-              </button>
+          {/* Footer actions */}
+          <section className="guide-section border-t border-border pt-8 mt-12">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex gap-3">
+                <button
+                  onClick={handleShare}
+                  className="px-4 py-2 rounded-lg border border-border bg-card text-sm hover:border-accent/50 transition-colors"
+                >
+                  {copied ? "Copied!" : "Share this guide"}
+                </button>
+                <button
+                  onClick={handleRegenerate}
+                  className="px-4 py-2 rounded-lg border border-border bg-card text-sm hover:border-accent/50 transition-colors"
+                >
+                  Regenerate
+                </button>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Generated {new Date(guide.generatedAt).toLocaleString()}
+              </p>
             </div>
-            <p className="text-muted-foreground text-xs">
-              Generated {new Date(guide.generatedAt).toLocaleString()}
-            </p>
-          </div>
-        </section>
+          </section>
+        </div>
       </main>
     </div>
   );

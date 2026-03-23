@@ -13,7 +13,23 @@ Guidelines for your analysis:
 - Keep the folderMap focused on important directories and key files. Don't list every single file.
 - The readingPath should have 5-8 items, ordered from most foundational to more specific.
 - Patterns should be specific and actionable, not generic observations.
-- Dependencies should cover only the 5-10 most architecturally significant ones.`;
+- Dependencies should cover only the 5-10 most architecturally significant ones.
+
+For the architectureGraph field:
+- Identify 5-12 logical components/modules in the codebase. These are NOT individual files — they are logical groupings (e.g., "Authentication", "API Layer", "Database Models", "UI Components", "State Management").
+- Each node should represent a meaningful architectural boundary.
+- Edges represent real dependencies or data flow between components. Only include edges where there is an actual import, API call, event, or data flow relationship. Don't connect everything to everything.
+- Node types should reflect the component's role:
+  - "core" = central business logic
+  - "api" = API routes, controllers, endpoints
+  - "data" = database, models, ORM, storage
+  - "ui" = frontend components, pages, views
+  - "config" = configuration, environment, build setup
+  - "utility" = shared helpers, utils, libs
+  - "external" = third-party integrations, external services
+- Keep node labels short (2-4 words). Put detail in the description.
+- keyFiles should be the 3-5 most important files a new dev should look at to understand this component.
+- patterns should list specific patterns used within that component.`;
 
 export function buildUserPrompt(
   repoInfo: RepoInfo,
@@ -21,16 +37,23 @@ export function buildUserPrompt(
   readme: string | null,
   fileContents: Map<string, string>
 ): string {
+  // Limit tree to ~500 entries to keep prompt small
   const treeStr = tree
-    .slice(0, 3000)
+    .slice(0, 500)
     .map((t) => `${t.type === "tree" ? "📁" : "📄"} ${t.path}`)
     .join("\n");
 
+  // Limit each file to 3000 chars, total files section to ~12000 chars
   let filesSection = "";
+  let totalFileChars = 0;
+  const maxTotalFileChars = 12000;
   fileContents.forEach((content, path) => {
+    if (totalFileChars >= maxTotalFileChars) return;
+    const budget = Math.min(3000, maxTotalFileChars - totalFileChars);
     const truncated =
-      content.length > 8000 ? content.slice(0, 8000) + "\n... (truncated)" : content;
+      content.length > budget ? content.slice(0, budget) + "\n... (truncated)" : content;
     filesSection += `\n<file path="${path}">\n${truncated}\n</file>\n`;
+    totalFileChars += truncated.length;
   });
 
   return `Analyze this GitHub repository and return a structured JSON guide for new developers.
@@ -48,7 +71,7 @@ Last Updated: ${repoInfo.updated_at}
 ${treeStr}
 </tree>
 
-${readme ? `<readme>\n${readme.slice(0, 10000)}\n</readme>` : ""}
+${readme ? `<readme>\n${readme.slice(0, 3000)}\n</readme>` : ""}
 
 <key_files>
 ${filesSection}
@@ -95,7 +118,28 @@ Return a JSON object with this exact schema:
       "role": "string — what it does in this project",
       "whyChosen": "string — why this over alternatives"
     }
-  ]
+  ],
+  "architectureGraph": {
+    "nodes": [
+      {
+        "id": "string — unique kebab-case id",
+        "label": "string — short 2-4 word name",
+        "description": "string — 2-3 sentence explanation",
+        "type": "core | api | data | ui | config | utility | external",
+        "keyFiles": ["string — file paths"],
+        "patterns": ["string — patterns used here"],
+        "linesOfCode": 0
+      }
+    ],
+    "edges": [
+      {
+        "source": "string — source node id",
+        "target": "string — target node id",
+        "label": "string — e.g. imports, calls API, reads from",
+        "type": "import | api-call | data-flow | event | config"
+      }
+    ]
+  }
 }
 
 Return ONLY the JSON object. No markdown fences, no explanations.`;

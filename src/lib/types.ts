@@ -1,3 +1,25 @@
+export interface ArchitectureGraph {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  description: string;
+  type: "core" | "api" | "data" | "ui" | "config" | "utility" | "external";
+  keyFiles: string[];
+  patterns: string[];
+  linesOfCode?: number;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  label?: string;
+  type: "import" | "api-call" | "data-flow" | "event" | "config";
+}
+
 export interface AnalysisResult {
   id: string;
   repoUrl: string;
@@ -13,6 +35,7 @@ export interface AnalysisResult {
     buildTool: string | null;
   };
   architecture: string;
+  architectureGraph?: ArchitectureGraph;
   folderMap: FolderAnnotation[];
   readingPath: ReadingPathItem[];
   patterns: Pattern[];
@@ -87,6 +110,7 @@ export interface ClaudeAnalysis {
     buildTool: string | null;
   };
   architecture: string;
+  architectureGraph?: ArchitectureGraph;
   folderMap: FolderAnnotation[];
   readingPath: ReadingPathItem[];
   patterns: Pattern[];

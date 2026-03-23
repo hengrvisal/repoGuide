@@ -226,8 +226,8 @@ export function selectKeyFiles(tree: TreeItem[]): string[] {
     selected.add(tls.path);
   }
 
-  // Limit to 20 files
-  return Array.from(selected).slice(0, 20);
+  // Limit to 10 files to stay within API token limits
+  return Array.from(selected).slice(0, 10);
 }
 
 export async function fetchKeyFileContents(

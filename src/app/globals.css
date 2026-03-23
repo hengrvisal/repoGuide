@@ -41,6 +41,34 @@ body {
   }
 }
 
+/* Full-width breakout for the architecture map */
+.map-breakout {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 24px 0;
+}
+
+/* Edge fade for the graph container */
+.graph-edge-fade {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 2%,
+    black 98%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 2%,
+    black 98%,
+    transparent 100%
+  );
+}
+
 /* Staggered fade-in animations for guide sections */
 .guide-section {
   opacity: 0;
@@ -54,6 +82,7 @@ body {
 .guide-section:nth-child(5) { animation-delay: 400ms; }
 .guide-section:nth-child(6) { animation-delay: 500ms; }
 .guide-section:nth-child(7) { animation-delay: 600ms; }
+.guide-section:nth-child(8) { animation-delay: 700ms; }
 
 @keyframes fade-in-up {
   from {

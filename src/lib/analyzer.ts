@@ -2,6 +2,59 @@ import { ClaudeAnalysis } from "./types";
 import { SYSTEM_PROMPT, buildUserPrompt } from "./prompts";
 import { RepoInfo, TreeItem } from "./types";
 
+/**
+ * Extract the first complete JSON object from a string.
+ * Handles markdown fences, leading/trailing text, etc.
+ */
+function extractJSON(raw: string): string {
+  let s = raw.trim();
+
+  // Strip markdown fences
+  if (s.startsWith("```")) {
+    s = s.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?\s*```\s*$/, "");
+  }
+
+  // Find the first '{' and match its closing '}'
+  const start = s.indexOf("{");
+  if (start === -1) throw new Error("No JSON object found in response");
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i];
+
+    if (escape) {
+      escape = false;
+      continue;
+    }
+
+    if (ch === "\\") {
+      if (inString) escape = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        return s.slice(start, i + 1);
+      }
+    }
+  }
+
+  // If we didn't find matching braces, return from start to end (best effort)
+  return s.slice(start);
+}
+
 export async function analyzeWithClaude(
   repoInfo: RepoInfo,
   tree: TreeItem[],
@@ -42,16 +95,18 @@ export async function analyzeWithClaude(
 
   const data = await response.json();
   const content = data.content?.[0]?.text;
+  const stopReason = data.stop_reason;
 
   if (!content) {
     throw new Error("No response content from Claude API");
   }
 
-  // Parse JSON — handle potential markdown fences
-  let jsonStr = content.trim();
-  if (jsonStr.startsWith("```")) {
-    jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+  // If the response was truncated, the JSON is likely incomplete
+  if (stopReason === "max_tokens") {
+    throw new Error("Claude response was truncated (max_tokens reached). Try a smaller repository.");
   }
+
+  const jsonStr = extractJSON(content);
 
   try {
     const analysis: ClaudeAnalysis = JSON.parse(jsonStr);
